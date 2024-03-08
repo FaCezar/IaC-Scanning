@@ -1,6 +1,6 @@
 #IAM Role
 resource "aws_iam_role" "ebilling-ec2-role" {
-  name = "ebilling-ec2-role-${random_string.bucket_suffix.result}"
+  name               = "ebilling-ec2-role-${random_string.bucket_suffix.result}"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -17,17 +17,19 @@ resource "aws_iam_role" "ebilling-ec2-role" {
 }
 EOF
   tags = {
-      Name = "ebilling-ec2-role-${random_string.bucket_suffix.result}"
-      Stack = "${var.stack-name}"
-      Scenario = "${var.scenario-name}"
+    Name      = "ebilling-ec2-role-${random_string.bucket_suffix.result}"
+    Stack     = "${var.stack-name}"
+    Scenario  = "${var.scenario-name}"
+    yor_name  = "ebilling-ec2-role"
+    yor_trace = "c918566e-7529-42d8-a2bd-3d726b1bbff3"
   }
 }
 
 #Iam Role Policy
 resource "aws_iam_policy" "ebilling-ec2-role-policy" {
-  name = "ebilling-ec2-role-policy-${random_string.bucket_suffix.result}"
+  name        = "ebilling-ec2-role-policy-${random_string.bucket_suffix.result}"
   description = "ebilling-ec2-role-policy-${random_string.bucket_suffix.result}"
-  policy = <<POLICY
+  policy      = <<POLICY
 {
     "Version": "2012-10-17",
     "Statement": [
@@ -81,11 +83,15 @@ resource "aws_iam_policy" "ebilling-ec2-role-policy" {
     ]
 }
 POLICY
+  tags = {
+    yor_name  = "ebilling-ec2-role-policy"
+    yor_trace = "13f61e94-3714-4bc0-ad95-6ed7670d7b79"
+  }
 }
 
 
 resource "aws_iam_policy" "s3_ap_policy" {
-  name   = "s3_ap_policy_${random_string.bucket_suffix.result}"
+  name = "s3_ap_policy_${random_string.bucket_suffix.result}"
   policy = jsonencode({
     "Version" : "2012-10-17",
     "Statement" : [
@@ -192,6 +198,10 @@ resource "aws_iam_policy" "s3_ap_policy" {
       }
     ]
   })
+  tags = {
+    yor_name  = "s3_ap_policy"
+    yor_trace = "f3449486-eb48-4874-82ec-57626f57fba3"
+  }
 }
 
 
@@ -199,7 +209,7 @@ resource "aws_iam_policy" "s3_ap_policy" {
 resource "aws_iam_policy_attachment" "ebilling-ec2-role-policy-attachment" {
   name = "ebilling-ec2-role-policy-attachment-${random_string.bucket_suffix.result}"
   roles = [
-      "${aws_iam_role.ebilling-ec2-role.name}"
+    "${aws_iam_role.ebilling-ec2-role.name}"
   ]
   policy_arn = "${aws_iam_policy.ebilling-ec2-role-policy.arn}"
 }
@@ -208,7 +218,7 @@ resource "aws_iam_policy_attachment" "ebilling-ec2-role-policy-attachment" {
 resource "aws_iam_policy_attachment" "s3_ap_policy-attachment" {
   name = "s3_ap_policy-attachment-${random_string.bucket_suffix.result}"
   roles = [
-      "${aws_iam_role.ebilling-ec2-role.name}"
+    "${aws_iam_role.ebilling-ec2-role.name}"
   ]
   policy_arn = "${aws_iam_policy.s3_ap_policy.arn}"
 }
@@ -217,84 +227,94 @@ resource "aws_iam_policy_attachment" "s3_ap_policy-attachment" {
 resource "aws_iam_instance_profile" "ebilling-ec2-instance-profile" {
   name = "ebilling-ec2-instance-profile-${random_string.bucket_suffix.result}"
   role = "${aws_iam_role.ebilling-ec2-role.name}"
+  tags = {
+    yor_name  = "ebilling-ec2-instance-profile"
+    yor_trace = "d126df20-116a-4092-b60d-6b8c25791918"
+  }
 }
 
 #AWS Key Pair
 resource "aws_key_pair" "ebilling-ec2-key-pair" {
-  key_name = "ebilling-ec2-key-pair-${random_string.bucket_suffix.result}"
+  key_name   = "ebilling-ec2-key-pair-${random_string.bucket_suffix.result}"
   public_key = "${file(var.ssh-public-key-for-ec2)}"
+  tags = {
+    yor_name  = "ebilling-ec2-key-pair"
+    yor_trace = "fc7125a6-e2f7-49d2-946b-23022fb06ef7"
+  }
 }
 
 #EC2 Instance
 resource "aws_instance" "ebilling-ubuntu-ec2" {
-    ami = "ami-053b0d53c279acc90"
-    instance_type = "t2.micro"
-    iam_instance_profile = "${aws_iam_instance_profile.ebilling-ec2-instance-profile.name}"
-    subnet_id = "${aws_subnet.ebilling-public-subnet-1.id}"
-    associate_public_ip_address = true
-    private_ip = "10.10.10.103"
-    vpc_security_group_ids = [
-        "${aws_security_group.ebilling-ec2-ssh-security-group.id}",
-        "${aws_security_group.ebilling-ec2-http-security-group.id}"
+  ami                         = "ami-053b0d53c279acc90"
+  instance_type               = "t2.micro"
+  iam_instance_profile        = "${aws_iam_instance_profile.ebilling-ec2-instance-profile.name}"
+  subnet_id                   = "${aws_subnet.ebilling-public-subnet-1.id}"
+  associate_public_ip_address = true
+  private_ip                  = "10.10.10.103"
+  vpc_security_group_ids = [
+    "${aws_security_group.ebilling-ec2-ssh-security-group.id}",
+    "${aws_security_group.ebilling-ec2-http-security-group.id}"
+  ]
+  key_name = "${aws_key_pair.ebilling-ec2-key-pair.key_name}"
+  root_block_device {
+    volume_type           = "gp2"
+    volume_size           = 60
+    delete_on_termination = true
+  }
+  provisioner "file" {
+    source      = "./app"
+    destination = "/home/ubuntu/app"
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = "${file(var.ssh-private-key-for-ec2)}"
+      host        = self.public_ip
+    }
+  }
+
+  provisioner "file" {
+    source      = "./scripts/script.sh"
+    destination = "/home/ubuntu/script.sh"
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = "${file(var.ssh-private-key-for-ec2)}"
+      host        = self.public_ip
+    }
+  }
+
+  provisioner "file" {
+    source      = "./scripts/initial_setup.sh"
+    destination = "/home/ubuntu/initial_setup.sh"
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = "${file(var.ssh-private-key-for-ec2)}"
+      host        = self.public_ip
+    }
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /home/ubuntu/initial_setup.sh",
+      "chmod +x /home/ubuntu/script.sh",
+      "/home/ubuntu/initial_setup.sh",
+      "/home/ubuntu/script.sh",
     ]
-    key_name = "${aws_key_pair.ebilling-ec2-key-pair.key_name}"
-    root_block_device {
-        volume_type = "gp2"
-        volume_size = 60
-        delete_on_termination = true
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = "${file(var.ssh-private-key-for-ec2)}"
+      host        = self.public_ip
     }
-    provisioner "file" {
-      source = "./app"
-      destination = "/home/ubuntu/app"
-      connection {
-        type = "ssh"
-        user = "ubuntu"
-        private_key = "${file(var.ssh-private-key-for-ec2)}"
-        host = self.public_ip
-      }
-    }
-
-    provisioner "file" {
-      source = "./scripts/script.sh"
-      destination = "/home/ubuntu/script.sh"
-      connection {
-        type = "ssh"
-        user = "ubuntu"
-        private_key = "${file(var.ssh-private-key-for-ec2)}"
-        host = self.public_ip
-      }
-    }
-
-    provisioner "file" {
-      source = "./scripts/initial_setup.sh"
-      destination = "/home/ubuntu/initial_setup.sh"
-      connection {
-        type = "ssh"
-        user = "ubuntu"
-        private_key = "${file(var.ssh-private-key-for-ec2)}"
-        host = self.public_ip
-      }
-    }
-
-    provisioner "remote-exec" {
-      inline = [
-        "chmod +x /home/ubuntu/initial_setup.sh",
-        "chmod +x /home/ubuntu/script.sh",
-        "/home/ubuntu/initial_setup.sh",
-        "/home/ubuntu/script.sh",
-      ]
-      connection {
-          type = "ssh"
-          user = "ubuntu"
-          private_key = "${file(var.ssh-private-key-for-ec2)}"
-          host = self.public_ip
-      }
-    }
-    tags = {
-        Name = "ebilling-ubuntu-ec2-${random_string.bucket_suffix.result}"
-        Stack = "${var.stack-name}"
-        Scenario = "${var.scenario-name}"
-    }
+  }
+  tags = {
+    Name      = "ebilling-ubuntu-ec2-${random_string.bucket_suffix.result}"
+    Stack     = "${var.stack-name}"
+    Scenario  = "${var.scenario-name}"
+    yor_name  = "ebilling-ubuntu-ec2"
+    yor_trace = "6ca0468b-759c-40df-aa79-f0c16954168a"
+  }
 }
 
 output "ebilling-ec2-public-ip" {
