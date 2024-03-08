@@ -29,3 +29,7 @@ variable "scenario-name" {
 variable "backend" {
     default = "ebilling"
 }
+
+variable "tfstate" {
+    default = "default"
+}
