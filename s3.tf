@@ -1,4 +1,4 @@
-# S3 Bucket Create
+# S3 Bucket Create v2
 
 # Generate a random string for the S3 bucket name
 resource "random_string" "bucket_suffix" {
