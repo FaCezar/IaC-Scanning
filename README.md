@@ -243,6 +243,6 @@ To maintain our conventions, please run lint on your branch before opening a PR.
 golangci-lint run --fix --skip-dirs tests/yor_plugins
 ```
 
-## Support
+## Support v2
 
 For more support contact us at https://slack.bridgecrew.io/.
