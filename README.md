@@ -246,3 +246,5 @@ golangci-lint run --fix --skip-dirs tests/yor_plugins
 ## Support v2
 
 For more support contact us at https://slack.bridgecrew.io/.
+
+Change in order to create a new workflow
