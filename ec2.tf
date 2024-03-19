@@ -315,6 +315,9 @@ resource "aws_instance" "ebilling-ubuntu-ec2" {
     yor_name  = "ebilling-ubuntu-ec2"
     yor_trace = "6ca0468b-759c-40df-aa79-f0c16954168a"
   }
+  metadata_options {
+    http_tokens = "required"
+  }
 }
 
 output "ebilling-ec2-public-ip" {
